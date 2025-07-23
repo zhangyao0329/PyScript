@@ -1,36 +1,54 @@
 import yt_dlp
+import sys
 
-# 视频下载链接，需要替换为实际的视频链接
-urls = ['https://www.bilibili.com/video/BV15b4y117RJ/?vd_source=7746d38fd4e722f93f1458816516c553',
-        'https://www.bilibili.com/video/BV15b4y117RJ?vd_source=7746d38fd4e722f93f1458816516c553&p=2&spm_id_from=333.788.videopod.episodes']
+# 进度钩子函数
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        total_bytes = d.get('total_bytes') or d.get('total_bytes_estimate')
+        downloaded_bytes = d.get('downloaded_bytes', 0)
+        if total_bytes:
+            percent = downloaded_bytes / total_bytes * 100
+            bar_len = 40
+            filled_len = int(round(bar_len * percent / 100))
+            bar = '=' * filled_len + '-' * (bar_len - filled_len)
+            sys.stdout.write(f'\r[{bar}] {percent:.2f}%')
+            sys.stdout.flush()
+        else:
+            sys.stdout.write(f"\r已下载 {downloaded_bytes / 1024 / 1024:.2f} MB")
+            sys.stdout.flush()
+    elif d['status'] == 'finished':
+        print("\n下载完成，正在合并或处理文件...")
+
+# 视频下载链接列表
+urls = [
+    'https://cn.pornhub.com/view_video.php?viewkey=ph5ec7ffaac3fea&pkey=182354621' # 替换为实际链接
+    ,'https://cn.pornhub.com/view_video.php?viewkey=ph57ff6d73ac5b6&pkey=182354621'
+]
+
+# 下载配置
+ydl_opts = {
+    'extractor_args': {'generic': ['impersonate']},
+    'cookies': r'E:\py\yt-dlp\cookies.txt',
+    'outtmpl': r'D:\Users\ZhangYao\Videos\download\%(title)s.%(ext)s',
+    'format': 'bestvideo+bestaudio/best',
+    'merge_output_format': 'mp4',
+    'fragment_retries': 20,
+    'retries': 10,
+    'continuedl': True,
+    'progress_hooks': [progress_hook],
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+        'Referer': '',  # 下面会动态赋值
+    },
+    'quiet': True,  # 关闭默认输出，只保留进度条
+}
+
+# 执行下载
 for url in urls:
-    # yt-dlp配置选项
-    ydl_opts = {
-        # cookies文件路径，用于加载登录cookies
-        'cookies': r'E:\py\yt-dlp\cookies.txt',
-        # 输出文件模板，定义了视频文件的保存路径和文件名格式
-        'outtmpl': r'D:\Users\ZhangYao\Videos\download\%(title)s.%(ext)s',
-        # 视频格式选择，这里选择最好的视频和音频质量，然后合并成一个mp4文件
-        'format': 'bestvideo+bestaudio/best',
-        # 合并输出文件格式，这里选择mp4
-        'merge_output_format': 'mp4',
-        # 片段重试次数，增加重试次数可以提高下载成功率
-        'fragment_retries': 20,  # 默认是10，设大一点
-        # 整体重试次数，增加重试次数可以提高下载成功率
-        'retries': 10,  # 整体重试次数
-        # 断点续传，开启后可以在下载中断后继续下载
-        'continuedl': True,  # 断点续传
-        # 如需限制清晰度可加，例如只下载720p及以下清晰度的视频
-        # 'format': 'best[height<=720]',
-        # 如需代理可加，定义HTTP代理服务器地址
-        # 'proxy': 'http://127.0.0.1:7890',
-        # HTTP头部信息，可以添加用户代理和Referer等信息
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-            'Referer': url,
-        },
-    }
-    # 使用yt-dlp下载视频
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        # 开始下载视频
-        ydl.download([url])
+    print(f"\n开始下载: {url}")
+    ydl_opts['http_headers']['Referer'] = url
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+    except Exception as e:
+        print(f"\n下载失败: {url}\n错误信息: {e}")
